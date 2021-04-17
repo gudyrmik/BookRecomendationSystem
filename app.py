@@ -1,11 +1,18 @@
-from flask import Flask
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
 
 @app.route('/')
-def books_recomendation():
-    render_template('books.html')
+def books():
+    return render_template('books.html')
+
+
+@app.route('/result', methods=['POST', 'GET'])
+def result():
+    if request.method == 'POST':
+        result = request.form
+        return render_template("result.html", result=result)
 
 
 if __name__ == '__main__':

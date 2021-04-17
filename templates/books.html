@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="en-US">
-   <body>
-      {% if marks>50 %}
-         <h1> Your result is pass!</h1>
-      {% else %}
-         <h1>Your result is fail</h1>
-      {% endif %}
-   </body>
+<body>
+
+<form action="http://localhost:5000/result" method="POST">
+    <p>Book title <input type="text" name="Book title"/></p>
+    <p><input type="submit" value="Recommend me"/></p>
+</form>
+</body>
 </html>
