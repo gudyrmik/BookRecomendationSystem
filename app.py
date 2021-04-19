@@ -12,7 +12,7 @@ def books():
 @app.route('/books_recommendation', methods=['POST', 'GET'])
 def result():
     if request.method == 'POST':
-        result = BookRecomendation.recommend(request.form)
+        result = BookRecomendation.recommend(request.form['Book title'])
         return render_template("books_recommendation.html", result=result)
 
 

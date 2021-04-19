@@ -1,14 +1,14 @@
 <!doctype html>
 <html>
 <body>
-<p>You also may like:</p>
+<p>You also may like these books:</p>
 <table border=1>
-    {% for key, value in result.items() %}
+    {% for book in result['book'] %}
         <tr>
-            <th> {{ key }} </th>
-            <td> {{ value }} </td>
+            <th> {{ book }} </th>
         </tr>
     {% endfor %}
 </table>
+
 </body>
 </html>
