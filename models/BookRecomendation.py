@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 
 class Recommender:
@@ -81,7 +82,19 @@ class Recommender:
 
         # users_ratigs = pd.merge(ratings, users, on=['User-ID'])
         dataset = pd.merge(ratings_data, books_data, on=['ISBN'])
+        dataset = Recommender.data_preprocess(dataset)
         Recommender.dataset_lowercase = dataset.apply(lambda x: x.str.lower() if (x.dtype == 'object') else x)
+
+    @staticmethod
+    def data_preprocess(dataset):
+        # drop non-related fields
+        dataset = dataset.drop(['Image-URL-S', 'Image-URL-M', 'Image-URL-L'], axis=1, inplace=False)
+        dataset['Year-Of-Publication'] = pd.to_numeric(dataset['Year-Of-Publication'], 'coerce').fillna(
+            datetime.now().year)
+        dataset[['Book-Author', 'Publisher']] = dataset[['Book-Author', 'Publisher']].fillna(
+            'NO DATA')
+
+        return dataset
 
     @staticmethod
     def recommend(book_title, number_of_results=10):
