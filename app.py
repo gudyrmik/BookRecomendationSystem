@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request
 from models import BookRecomendation
+from models.BookRecomendation import Recommender
 
 app = Flask(__name__)
-
+Recommender.load_data()
 
 @app.route('/')
 def books():
@@ -12,7 +13,7 @@ def books():
 @app.route('/books_recommendation', methods=['POST', 'GET'])
 def result():
     if request.method == 'POST':
-        result = BookRecomendation.recommend(request.form['Book title'])
+        result = BookRecomendation.Recommender.recommend(request.form['Book title'])
         return render_template("books_recommendation.html", result=result)
 
 
