@@ -4,23 +4,71 @@ from datetime import datetime
 
 
 class Recommender:
+    """
+    This constant represents a minimal number of any non-zero rates,
+    that a book should have to be considered by a recommendation engine.
+    """
     RATINGS_NUMBER_THRESHOLD = 8
 
     @staticmethod
+    def load_data():
+        """
+        Reads RAW data from .csv files in a 'datasets' directory and prepares a dataset for recommendation engine usage in a
+        Recommender.dataset field
+        """
+        # load ratings
+        ratings_data = pd.read_csv('datasets\\BX-Book-Ratings.csv', encoding='cp1251', sep=';', low_memory=False,
+                                   warn_bad_lines=False)
+        ratings_data = ratings_data[ratings_data['Book-Rating'] != 0]
+
+        # load books
+        books_data = pd.read_csv('datasets\\BX-Books.csv', encoding='cp1251', sep=';', low_memory=False,
+                                 error_bad_lines=False,
+                                 warn_bad_lines=False)
+
+        dataset = pd.merge(ratings_data, books_data, on=['ISBN'])
+        Recommender.dataset = Recommender.data_preprocess(dataset)
+
+    @staticmethod
+    def data_preprocess(dataset):
+        """
+        Cleans RAW dataset from unused columns, ensures correct data types, fills gaps with meaningful strings.
+        :param dataset: RAW dataset merged from source data files
+        :return: dataset prepared for engine usage
+        """
+        # drop non-related fields
+        dataset = dataset.drop(['Image-URL-S', 'Image-URL-M', 'Image-URL-L'], axis=1, inplace=False)
+        dataset['Year-Of-Publication'] = pd.to_numeric(dataset['Year-Of-Publication'], 'coerce').fillna(
+            datetime.now().year)
+        dataset[['Book-Author', 'Publisher']] = dataset[['Book-Author', 'Publisher']].fillna(
+            'NO DATA')
+
+        dataset = dataset.apply(lambda x: x.str.lower() if (x.dtype == 'object') else x)
+
+        return dataset
+
+    @staticmethod
     def create_dataset_for_correlations(book_title):
+        """
+        Takes RAW dataset, loaded into static Recommender.dataset_lowercase, and prepares it for correlation calculation
+        considering user requested book title
+        :param book_title: title of the book obtained from a user
+        :return: dataset prepared for correlation calculation
+        """
+
         # get author of requested book
         author_arr = np.unique(
-            Recommender.dataset_lowercase.loc[Recommender.dataset_lowercase['Book-Title'] == book_title]['Book-Author'])
+            Recommender.dataset.loc[Recommender.dataset['Book-Title'] == book_title]['Book-Author'])
         author = author_arr[1] if author_arr.any() else ''
 
-        requested_author_users = Recommender.dataset_lowercase['User-ID'][
-            (Recommender.dataset_lowercase['Book-Title'] == book_title) & (
-                    Recommender.dataset_lowercase['Book-Author'] == author)]
+        requested_author_users = Recommender.dataset['User-ID'][
+            (Recommender.dataset['Book-Title'] == book_title) & (
+                    Recommender.dataset['Book-Author'] == author)]
         requested_author_users = np.unique(requested_author_users.tolist())
 
         # final dataset
-        books_of_requested_author_users = Recommender.dataset_lowercase[
-            (Recommender.dataset_lowercase['User-ID'].isin(requested_author_users))]
+        books_of_requested_author_users = Recommender.dataset[
+            (Recommender.dataset['User-ID'].isin(requested_author_users))]
 
         # Number of ratings per other books in dataset
         number_of_rating_per_book = books_of_requested_author_users.groupby(['Book-Title']).agg('count').reset_index()
@@ -44,6 +92,12 @@ class Recommender:
 
     @staticmethod
     def calculate_correlation(book_title, dataset_for_corr):
+        """
+        Calculate correlations between books of the same author as user provided book, and others.
+        :param book_title: title of the book obtained from a user
+        :param dataset_for_corr: dataset used to calculate correlations
+        :return: dataframe contained correlation books information
+        """
 
         # Take out the selected book from correlation dataframe
         dataset_of_other_books = dataset_for_corr.copy(deep=False)
@@ -69,35 +123,13 @@ class Recommender:
         return corr_fellowship
 
     @staticmethod
-    def load_data():
-        # load ratings
-        ratings_data = pd.read_csv('datasets\\BX-Book-Ratings.csv', encoding='cp1251', sep=';',
-                                   warn_bad_lines=False)
-        ratings_data = ratings_data[ratings_data['Book-Rating'] != 0]
-
-        # load books
-        books_data = pd.read_csv('datasets\\BX-Books.csv', encoding='cp1251', sep=';',
-                                 error_bad_lines=False,
-                                 warn_bad_lines=False)
-
-        # users_ratigs = pd.merge(ratings, users, on=['User-ID'])
-        dataset = pd.merge(ratings_data, books_data, on=['ISBN'])
-        dataset = Recommender.data_preprocess(dataset)
-        Recommender.dataset_lowercase = dataset.apply(lambda x: x.str.lower() if (x.dtype == 'object') else x)
-
-    @staticmethod
-    def data_preprocess(dataset):
-        # drop non-related fields
-        dataset = dataset.drop(['Image-URL-S', 'Image-URL-M', 'Image-URL-L'], axis=1, inplace=False)
-        dataset['Year-Of-Publication'] = pd.to_numeric(dataset['Year-Of-Publication'], 'coerce').fillna(
-            datetime.now().year)
-        dataset[['Book-Author', 'Publisher']] = dataset[['Book-Author', 'Publisher']].fillna(
-            'NO DATA')
-
-        return dataset
-
-    @staticmethod
     def recommend(book_title, number_of_results=10):
+        """
+        Primary API endpoint of books recommendation engine.
+        :param book_title: title of the book obtained from a user
+        :param number_of_results: number of books to recommend
+        :return: list of recommended book titles
+        """
         dataset_for_corr = Recommender.create_dataset_for_correlations(book_title)
 
         result_list = []
